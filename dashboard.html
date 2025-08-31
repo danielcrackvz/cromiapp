@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CROMI - Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Librerías para exportación -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script>
+    const SUPABASE_URL = "https://oyfdbrufeqqofeixkzhj.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95ZmRicnVmZXFxb2ZlaXhremhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1MzA2ODEsImV4cCI6MjA3MjEwNjY4MX0.H8xcQQ5FUDKjFoay857Mebrqxu37sHjIhI_O3Q1eX20";
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  </script>
+</head>
+<body>
+  <header class="navbar dashboard-navbar">
+    <div class="logo">CROMI</div>
+    <nav>
+      <a href="index.html" class="btn-login">Cerrar sesión</a>
+    </nav>
+  </header>
+
+  <main class="dashboard">
+    <div class="dashboard-header">
+      <div class="header-content">
+        <div class="welcome-section">
+          <h1>Panel de Control</h1>
+          <p>Julio Caceres Veizaga</p>
+        </div>
+        <div class="date-section">
+          <span class="current-date">30 de Agosto, 2025</span>
+          <div class="status-indicator">
+           <span class="status-dot active"></span>
+           <span>En línea</span>
+          </div>
+        </div>
+      </div>
+    </div>
+   
+   <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card earnings">
+        <div class="stat-icon">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 6v6l4 2"/>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <h3>Ingresos de Hoy</h3>
+          <p class="stat-value">Bs. 125.50</p>
+          <span class="stat-change positive">+12.5% vs ayer</span>
+        </div>
+      </div>
+
+      <div class="stat-card weekly">
+        <div class="stat-icon">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <path d="M3 9h18M9 21V9"/>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <h3>Ingresos de la Semana</h3>
+          <p class="stat-value">Bs. 845.20</p>
+          <span class="stat-change positive">+8.3% vs semana pasada</span>
+        </div>
+      </div>
+
+      <div class="stat-card monthly">
+        <div class="stat-icon">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7,10 12,15 17,10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <h3>Ingresos del Mes</h3>
+          <p class="stat-value">Bs. 3,420.00</p>
+          <span class="stat-change neutral">estables</span>
+        </div>
+      </div>
+
+      <div class="stat-card passengers">
+        <div class="stat-icon">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+       </div>
+       <div class="stat-content">
+         <h3>Total Micros</h3>
+         <p class="stat-value">3</p>
+         <span class="stat-change neutral">activos</span>
+       </div>
+     </div>
+   </div>
+
+   <!-- Chart Section -->
+   <div class="chart-container" style="margin: 2rem 0; background: #fff; padding: 1rem; border-radius: 12px;">
+     <h2>Gráfico de Ingresos</h2>
+     <canvas id="incomeChart" height="100"></canvas>
+   </div>
+
+   <!-- Payments Section -->
+   <div class="payments-container">
+     <div class="payments-header">
+       <div class="section-title">
+         <h2>Transacciones Recientes</h2>
+         <span class="transaction-count">42 transacciones hoy</span>
+       </div>
+       <div class="header-actions">
+         
+         <!-- Nuevos botones de exportación -->
+         <div class="export-buttons">
+           <button class="export-btn pdf" onclick="generarPDF()" id="btnPDF">
+             <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+               <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+             </svg>
+             Generar PDF
+           </button>
+           <button class="export-btn excel" onclick="generarExcel()" id="btnExcel">
+             <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+               <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+             </svg>
+             Generar Excel
+           </button>
+         </div>
+       </div>
+     </div>
+
+     <div class="payments-table-container">
+       <div class="payments-table">
+         <div class="table-header">
+           <div class="header-cell">Hora</div>
+           <div class="header-cell">Monto</div>
+           <div class="header-cell">Estado</div>
+         </div>
+         
+         <div class="table-body">
+           <div class="payment-row recent">
+             <div class="cell time-cell">
+               <span class="time">14:25</span>
+               <span class="date">Hace 2 min</span>
+             </div>
+             <div class="cell amount-cell">
+               <span class="amount">Bs. 3.00</span>
+             </div>
+             <div class="cell status-cell">
+               <span class="status success">Completado</span>
+             </div>
+           </div>
+           
+           <div class="payment-row">
+             <div class="cell time-cell">
+               <span class="time">14:18</span>
+               <span class="date">Hace 9 min</span>
+             </div>
+             <div class="cell amount-cell">
+               <span class="amount">Bs. 2.50</span>
+             </div>
+             <div class="cell status-cell">
+               <span class="status success">Completado</span>
+             </div>
+           </div>
+           
+           <div class="payment-row">
+             <div class="cell time-cell">
+               <span class="time">14:12</span>
+               <span class="date">Hace 15 min</span>
+             </div>
+             <div class="cell amount-cell">
+               <span class="amount">Bs. 3.00</span>
+             </div>
+             <div class="cell status-cell">
+               <span class="status success">Completado</span>
+             </div>
+           </div>
+         </div>
+       </div>
+     </div>
+   </div>
+ </main>
+
+ <footer>
+   <p>&copy; 2025 CROMI - Sistema de Pago Inteligente</p>
+ </footer>
+
+ <script>
+   async function cargarIngresos() {
+     // INGRESOS HOY
+     const { data: hoy, error: errHoy } = await supabase
+       .from("pagos_pago")
+       .select("monto, fecha_hora")
+       .gte("fecha_hora", new Date().toISOString().split("T")[0]); // desde hoy
+
+     // INGRESOS SEMANA (últimos 7 días)
+     const fechaSemana = new Date();
+     fechaSemana.setDate(fechaSemana.getDate() - 7);
+
+     const { data: semana, error: errSemana } = await supabase
+       .from("pagos_pago")
+       .select("monto, fecha_hora")
+       .gte("fecha_hora", fechaSemana.toISOString());
+
+     // INGRESOS MES (últimos 30 días)
+     const fechaMes = new Date();
+     fechaMes.setDate(fechaMes.getDate() - 30);
+
+     const { data: mes, error: errMes } = await supabase
+       .from("pagos_pago")
+       .select("monto, fecha_hora")
+       .gte("fecha_hora", fechaMes.toISOString());
+
+     // Calcular totales
+     const totalHoy = hoy?.reduce((acc, t) => acc + parseFloat(t.monto), 0) || 0;
+     const totalSemana = semana?.reduce((acc, t) => acc + parseFloat(t.monto), 0) || 0;
+     const totalMes = mes?.reduce((acc, t) => acc + parseFloat(t.monto), 0) || 0;
+
+     // Mostrar en tarjetas
+     document.querySelector(".earnings .stat-value").textContent = `Bs. ${totalHoy.toFixed(2)}`;
+     document.querySelector(".weekly .stat-value").textContent = `Bs. ${totalSemana.toFixed(2)}`;
+     document.querySelector(".monthly .stat-value").textContent = `Bs. ${totalMes.toFixed(2)}`;
+   }
+
+   async function cargarTransacciones() {
+     const { data, error } = await supabase
+       .from("pagos_pago")
+       .select("monto, estado, fecha_hora")
+       .order("fecha_hora", { ascending: false })
+       .limit(10);
+
+     if (error) {
+       console.error("Error cargando transacciones:", error);
+       return;
+     }
+
+     const tbody = document.querySelector(".payments-table .table-body");
+     tbody.innerHTML = ""; // limpiar
+
+     data.forEach(tx => {
+       const fecha = new Date(tx.fecha_hora);
+       const row = `
+         <div class="payment-row">
+           <div class="cell time-cell">
+             <span class="time">${fecha.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+             <span class="date">${fecha.toLocaleDateString()}</span>
+           </div>
+           <div class="cell amount-cell">
+             <span class="amount">Bs. ${parseFloat(tx.monto).toFixed(2)}</span>
+           </div>
+           <div class="cell status-cell">
+             <span class="status ${tx.estado === "completado" ? "success" : "pending"}">${tx.estado}</span>
+           </div>
+         </div>
+       `;
+       tbody.insertAdjacentHTML("beforeend", row);
+     });
+   }
+
+   let incomeChartInstance = null;
+   async function cargarGrafico() {
+     const { data, error } = await supabase
+       .from("pagos_pago")
+       .select("monto, fecha_hora");
+
+     if (error) {
+       console.error("Error gráfico:", error);
+       return;
+     }
+
+     // Agrupar por día
+     const ingresosPorDia = {};
+     data.forEach(tx => {
+       const fecha = new Date(tx.fecha_hora).toLocaleDateString();
+       ingresosPorDia[fecha] = (ingresosPorDia[fecha] || 0) + parseFloat(tx.monto);
+     });
+
+     const labels = Object.keys(ingresosPorDia);
+     const values = Object.values(ingresosPorDia);
+
+     const ctx = document.getElementById("incomeChart").getContext("2d");
+
+     // Destruir gráfico anterior si existe
+     if (incomeChartInstance) {
+       incomeChartInstance.destroy();
+     }
+
+     incomeChartInstance = new Chart(ctx, {
+       type: "line",
+       data: {
+         labels: labels,
+         datasets: [{
+           label: "Ingresos (Bs.)",
+           data: values,
+           borderColor: "#4CAF50",
+           backgroundColor: "rgba(76, 175, 80, 0.2)",
+           tension: 0.4,
+           fill: true,
+           pointRadius: 5
+         }]
+       },
+       options: {
+         responsive: true,
+         plugins: {
+           legend: { display: true }
+         }
+       }
+     });
+   }
+
+   // Función para obtener movimientos del mes
+   async function obtenerMovimientosDelMes() {
+     const fechaMes = new Date();
+     fechaMes.setDate(fechaMes.getDate() - 30);
+
+     const { data, error } = await supabase
+       .from("pagos_pago")
+       .select("*")
+       .gte("fecha_hora", fechaMes.toISOString())
+       .order("fecha_hora", { ascending: false });
+
+     if (error) {
+       console.error("Error obteniendo movimientos:", error);
+       return [];
+     }
+
+     return data || [];
+   }
+
+   // Función para generar PDF
+   async function generarPDF() {
+     const btnPDF = document.getElementById('btnPDF');
+     const originalHTML = btnPDF.innerHTML;
+     
+     // Mostrar loading
+     btnPDF.innerHTML = '<div class="spinner"></div> Generando...';
+     btnPDF.disabled = true;
+
+     try {
+       const movimientos = await obtenerMovimientosDelMes();
+       
+       if (movimientos.length === 0) {
+         alert('No hay movimientos en el último mes para exportar.');
+         return;
+       }
+
+       const { jsPDF } = window.jspdf;
+       const doc = new jsPDF();
+
+       // Configurar fuente y título
+       doc.setFontSize(20);
+       doc.text('CROMI - Reporte de Movimientos', 20, 20);
+       
+       doc.setFontSize(12);
+       doc.text('Sistema de Pago Inteligente', 20, 30);
+       doc.text(`Período: Últimos 30 días`, 20, 40);
+       doc.text(`Generado: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 20, 50);
+       doc.text(`Usuario: Julio Caceres Veizaga`, 20, 60);
+
+       // Preparar datos para la tabla
+       const tableData = movimientos.map(mov => [
+         new Date(mov.fecha_hora).toLocaleDateString(),
+         new Date(mov.fecha_hora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+         `Bs. ${parseFloat(mov.monto).toFixed(2)}`,
+         mov.estado || 'N/A',
+         mov.descripcion || 'Pago de transporte'
+       ]);
+
+       // Calcular total
+       const totalMes = movimientos.reduce((acc, mov) => acc + parseFloat(mov.monto), 0);
+
+       // Crear tabla
+       doc.autoTable({
+         head: [['Fecha', 'Hora', 'Monto', 'Estado', 'Descripción']],
+         body: tableData,
+         startY: 80,
+         styles: {
+           fontSize: 10,
+           cellPadding: 3
+         },
+         headStyles: {
+           fillColor: [102, 126, 234],
+           textColor: 255
+         },
+         alternateRowStyles: {
+           fillColor: [245, 245, 245]
+         }
+       });
+
+       // Agregar resumen al final
+       const finalY = doc.lastAutoTable.finalY + 20;
+       doc.setFontSize(14);
+       doc.text(`Total de transacciones: ${movimientos.length}`, 20, finalY);
+       doc.text(`Monto total del período: Bs. ${totalMes.toFixed(2)}`, 20, finalY + 10);
+
+       // Descargar el PDF
+       doc.save(`CROMI_Movimientos_${new Date().getFullYear()}-${(new Date().getMonth() + 1).toString().padStart(2, '0')}.pdf`);
+
+     } catch (error) {
+       console.error('Error generando PDF:', error);
+       alert('Error al generar el PDF. Por favor, intenta nuevamente.');
+     } finally {
+       // Restaurar botón
+       btnPDF.innerHTML = originalHTML;
+       btnPDF.disabled = false;
+     }
+   }
+
+   // Función para generar Excel
+   async function generarExcel() {
+     const btnExcel = document.getElementById('btnExcel');
+     const originalHTML = btnExcel.innerHTML;
+     
+     // Mostrar loading
+     btnExcel.innerHTML = '<div class="spinner"></div> Generando...';
+     btnExcel.disabled = true;
+
+     try {
+       const movimientos = await obtenerMovimientosDelMes();
+       
+       if (movimientos.length === 0) {
+         alert('No hay movimientos en el último mes para exportar.');
+         return;
+       }
+
+       // Preparar datos para Excel
+       const datosExcel = movimientos.map(mov => ({
+         'Fecha': new Date(mov.fecha_hora).toLocaleDateString(),
+         'Hora': new Date(mov.fecha_hora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+         'Monto (Bs.)': parseFloat(mov.monto).toFixed(2),
+         'Estado': mov.estado || 'N/A',
+         'Descripción': mov.descripcion || 'Pago de transporte',
+         'ID Transacción': mov.id || 'N/A'
+       }));
+
+       // Calcular resumen
+       const totalMes = movimientos.reduce((acc, mov) => acc + parseFloat(mov.monto), 0);
+       const resumen = [
+         { 'Concepto': 'Total de transacciones', 'Valor': movimientos.length },
+         { 'Concepto': 'Monto total (Bs.)', 'Valor': totalMes.toFixed(2) },
+         { 'Concepto': 'Período', 'Valor': 'Últimos 30 días' },
+         { 'Concepto': 'Generado el', 'Valor': new Date().toLocaleDateString() }
+       ];
+
+       // Crear libro de Excel
+       const wb = XLSX.utils.book_new();
+       
+       // Hoja de movimientos
+       const wsMovimientos = XLSX.utils.json_to_sheet(datosExcel);
+       XLSX.utils.book_append_sheet(wb, wsMovimientos, "Movimientos");
+       
+       // Hoja de resumen
+       const wsResumen = XLSX.utils.json_to_sheet(resumen);
+       XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen");
+
+       // Descargar el archivo
+       XLSX.writeFile(wb, `CROMI_Movimientos_${new Date().getFullYear()}-${(new Date().getMonth() + 1).toString().padStart(2, '0')}.xlsx`);
+
+     } catch (error) {
+       console.error('Error generando Excel:', error);
+       alert('Error al generar el archivo Excel. Por favor, intenta nuevamente.');
+     } finally {
+       // Restaurar botón
+       btnExcel.innerHTML = originalHTML;
+       btnExcel.disabled = false;
+     }
+   }
+
+   // Inicializar dashboard
+   document.addEventListener('DOMContentLoaded', () => {
+     cargarIngresos();
+     cargarTransacciones();
+     cargarGrafico();
+   });
+ </script>
+</body>
+</html>
